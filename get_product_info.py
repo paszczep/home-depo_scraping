@@ -67,6 +67,6 @@ def get_product_info(product_soup):
         prod_prop_dict = dict(zip(property_names, property_values))
         product_dict['specs'] = json.dumps(prod_prop_dict)
         product_dict['specs'] = prod_prop_dict
-    for key, value in product_dict.items():
-        print(key, value)
+    # for key, value in product_dict.items():
+    #     print(key, value)
     return product_dict

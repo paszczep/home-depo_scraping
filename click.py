@@ -16,6 +16,8 @@ import random
 import logging
 import json
 from bs4 import BeautifulSoup, NavigableString, Tag
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("home-depo")
 
 PROCESS_MAP = {
     'Dishwashers': [
@@ -41,52 +43,54 @@ def get_web_driver():
     return used_webdriver
 
 
-def pretend_to_be_human(driver):
+def pretend_to_be_human(human_driver):
+    logger.info(f' browsing {human_driver.current_url}')
     rand_int_seconds = random.randint(5, 7)
     rand_float_seconds = random.random()
     time.sleep(float(rand_int_seconds) - rand_float_seconds*3)
-    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+    human_driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
     # driver.find_element_by_tag_name('body').send_keys(Keys.CONTROL + Keys.HOME)
     try:
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        human_driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
         for push_that_button in range(rand_int_seconds):
-            body = driver.find_element_by_css_selector('body')
+            body = human_driver.find_element_by_css_selector('body')
             body.send_keys(Keys.PAGE_UP)
-            time.sleep(rand_float_seconds/3)
+            time.sleep(rand_float_seconds)
             # driver.implicitly_wait(rand_float_seconds/2)
     except StaleElementReferenceException as ex:
-        print(ex)
-        pretend_to_be_human(driver)
+        logger.info(ex)
+        pretend_to_be_human(human_driver)
 
 
 def get_products_from_page(page_driver):
-    driver = page_driver
     results_css_select = "div.results-wrapped"
-    results_field = WebDriverWait(driver, 10).until(
+    results_field = WebDriverWait(page_driver, 10).until(
         ec.presence_of_element_located((By.CSS_SELECTOR, results_css_select)))
 
     product_tiles = results_field.find_elements_by_css_selector("div.desktop.product-pod")
 
-    print(f'found {len(product_tiles)} products')
+    logger.info(f'found {len(product_tiles)} products')
     page_products = []
     for product_tile in product_tiles:
         product_field = product_tile.get_attribute('outerHTML')
         product_soup = BeautifulSoup(product_field, 'html.parser')
         product_info_dict = get_product_info(product_soup)
         page_products.append(product_info_dict)
-
+    logger.info(f'page_products {len(page_products)}')
     return page_products
 
 
 def get_all_product_pages(all_page_driver):
     all_pages_products = []
-    logging.info(all_page_driver.current_url)
+    logger.info(all_page_driver.current_url)
     current_page = 0
     next_page = 1
     while current_page < next_page:
-        pretend_to_be_human(driver=all_page_driver)
+
+        pretend_to_be_human(human_driver=all_page_driver)
         page_products = get_products_from_page(page_driver=all_page_driver)
-        all_pages_products.append(page_products)
+        all_pages_products += page_products
+
         pagination_items = all_page_driver.find_elements_by_css_selector("li.hd-pagination__item")
         text_items = [item.text for item in pagination_items if item != '']
         if text_items:
@@ -94,25 +98,29 @@ def get_all_product_pages(all_page_driver):
             pagination_area = all_page_driver.find_element_by_css_selector("nav.hd-pagination")
             try:
                 next_page_button = pagination_area.find_element_by_link_text(str(next_page))
+                logger.info(f' found {str(next_page)} page button')
                 webdriver.ActionChains(all_page_driver).move_to_element(next_page_button).click(
                     next_page_button).perform()
                 time.sleep(5)
                 current_page += 1
             except NoSuchElementException:
+                logger.info(f' last product page reached at {str(current_page)}')
                 next_page -= 2
         else:
             next_page = 0
-
+    logger.info(f'all_pages_products {len(all_pages_products)}')
     return all_pages_products
 
 
 def get_sub_department_page(sub_dept_driver, sub_department):
     time.sleep(3)
+    logger.info(f' looking around for {sub_department}')
     sub_department_link = sub_dept_driver.find_element_by_link_text(sub_department)
     webdriver.ActionChains(sub_dept_driver).move_to_element(sub_department_link).click(sub_department_link).perform()
 
 
 def push_select_store_button(button_driver):
+    logger.info(f'shopping at {button_driver.current_url}')
     button_xpath = "//*[contains(text(), 'Shop This Store')]"
     select_store_button = WebDriverWait(button_driver, 10).until(ec.presence_of_element_located((By.XPATH, button_xpath)))
     select_store_button.click()
@@ -124,6 +132,7 @@ def deal_with_mattresses(product_brand):
         ec.presence_of_element_located((By.CSS_SELECTOR, 'input.dimension__filter')))
     brand_search.send_keys(product_brand)
     brand_xpath = f"//*[contains(text(), '{product_brand}')]"
+    logger.info(f' Looking for {product_brand} mattress')
     time.sleep(3)
     select_brand_button = WebDriverWait(driver, 10).until(
         ec.presence_of_element_located((By.XPATH, brand_xpath)))
@@ -132,8 +141,10 @@ def deal_with_mattresses(product_brand):
 
 
 def select_appliance_brand(appliance_driver, product_brand):
+
     WebDriverWait(appliance_driver, 10).until(
         ec.presence_of_element_located((By.LINK_TEXT, product_brand))).click()
+    logger.info(f' Selected {product_brand}')
 
 
 def get_shop_products(shop_driver, shop_url):
@@ -157,8 +168,9 @@ def get_shop_products(shop_driver, shop_url):
                 else:
                     select_appliance_brand(product_brand=product_brand, appliance_driver=shop_driver)
 
-                all_shop_products.append(get_all_product_pages(all_page_driver=shop_driver))
-
+                shop_products = get_all_product_pages(all_page_driver=shop_driver)
+                all_shop_products += shop_products
+    logger.info(f'all_shop_products {len(all_shop_products)}')
     return all_shop_products
 
 
@@ -167,10 +179,10 @@ def run_through_shops(global_driver):
     global_products = []
 
     for url in shop_url_list:
-        products = get_shop_products(global_driver, url)
-        global_products.append(products)
+        all_shop_products = get_shop_products(global_driver, url)
+        global_products += all_shop_products
 
-    print(len(global_products))
+    logger.info(f'global_products {len(global_products)}')
     return global_products
 
 
