@@ -7,8 +7,11 @@ def price_string_from_div(price_div):
     return price_str
 
 
-def get_product_info(product_soup):
-    product_dict = {}
+def get_product_info(product_soup, shop, department):
+    product_dict = {
+        'shop': shop,
+        'department': department,
+    }
 
     product_url = product_soup.find("a", {"class": "header product-pod--ie-fix"})['href']
     product_dict['url'] = f'https://www.homedepot.com{product_url}'
@@ -23,7 +26,6 @@ def get_product_info(product_soup):
     if product_model is not None:
         product_dict['model'] = product_model.text
 
-    # main_price_divs = tile.find_all('div', {"class": "price"})
     price_divs = product_soup.find_all('div', {"class": "price"})
     if len(price_divs) == 2:
         price_lower, price_upper,  = price_divs[0], price_divs[1]
@@ -33,17 +35,6 @@ def get_product_info(product_soup):
         # product_dict['range_price'] = True
     elif len(price_divs) == 1:
         product_dict['main_price'] = price_string_from_div(price_divs.pop())
-        # product_dict['range_price'] = False
-
-        # for price_div in price_divs:
-        #     print('price_div', price_div)
-        #     if price_div is not None:
-        #         # print('price div', price_div)
-        #         main_price_els = price_div.find('div', {'class': "price-format__main-price"})
-        #         price_els = [el.text for el in main_price_els.find_all('span')]
-        #         print(f'{price_els[0]}{price_els[1]}.{price_els[2]}')
-                # for price_el in main_price_els:
-                #     print('price_el', price_el)
 
     # lower_price_element = tile.find('div', {"class": "price-detailed__lower-price-wrapper"})
     # if lower_price_element is not None:
