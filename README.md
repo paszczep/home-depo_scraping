@@ -7,4 +7,4 @@ Upon running run_for_output.py, having configured the webdriver, user will be pr
 
 Hashing and adding Brands under Sub-department dictionary keys allows including and excluding elements of data gathering.
 
-Further development could include appliocation manager to enable running at scale and creating Product class including data from product page url request.
+Further development could include application manager to enable running at scale, and creating Product class including data from product page url request.
