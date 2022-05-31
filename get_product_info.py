@@ -1,13 +1,13 @@
-import json
+# import json
 
 
-def price_string_from_div(price_div):
+def _price_string_from_div(price_div):
     price_els = [el.text for el in price_div.find_all('span')]
     price_str = f'{price_els[0]}{price_els[1]}.{price_els[2]}'
     return price_str
 
 
-def get_product_info(product_soup, shop, department):
+def _get_product_info(product_soup, shop, department):
     product_dict = {
         'shop': shop,
         'department': department,
@@ -29,13 +29,14 @@ def get_product_info(product_soup, shop, department):
     price_divs = product_soup.find_all('div', {"class": "price"})
     if len(price_divs) == 2:
         price_lower, price_upper,  = price_divs[0], price_divs[1]
-        price_lower = price_string_from_div(price_lower)
-        price_upper = price_string_from_div(price_upper)
+        price_lower = _price_string_from_div(price_lower)
+        price_upper = _price_string_from_div(price_upper)
         product_dict['main_price'] = f'{price_lower} - {price_upper}'
         # product_dict['range_price'] = True
     elif len(price_divs) == 1:
-        product_dict['main_price'] = price_string_from_div(price_divs.pop())
+        product_dict['main_price'] = _price_string_from_div(price_divs.pop())
 
+    #
     # lower_price_element = tile.find('div', {"class": "price-detailed__lower-price-wrapper"})
     # if lower_price_element is not None:
     #     if lower_price_element.text == 'See Lower Price in Cart':
@@ -56,7 +57,7 @@ def get_product_info(product_soup, shop, department):
         property_names = [el.text for el in prod_specs_div.find_all('div') if 'kpf__name' in str(el['class'])]
         property_values = [el.text for el in prod_specs_div.find_all('div') if 'kpf__value' in str(el['class'])]
         prod_prop_dict = dict(zip(property_names, property_values))
-        product_dict['specs'] = json.dumps(prod_prop_dict)
+        # product_dict['specs'] = json.dumps(prod_prop_dict)
         product_dict['specs'] = prod_prop_dict
     # for key, value in product_dict.items():
     #     print(key, value)
