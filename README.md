@@ -5,6 +5,6 @@ Script requires a web driver to run to be configured in setup.py. 11mb binary se
 
 Upon running run_for_output.py, having configured the webdriver, user will be presented with automated soluition of the given task.
 
-Hashing and adding Brands in Sub-department dictionary keys allows including and excluding elements of data gathering.
+Hashing and adding Brands under Sub-department dictionary keys allows including and excluding elements of data gathering.
 
 Further development could include appliocation manager to enable running at scale and creating Product class including data from product page url request.
