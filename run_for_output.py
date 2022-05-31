@@ -4,13 +4,13 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
-from get_product_info import _get_product_info
-from setup import PROCESS_MAP, STORE_LOCATION_URLS, CHROME_WEBDRIVER_PATH
 import time
 import random
 import logging
 import csv
 from bs4 import BeautifulSoup
+from get_product_info import _get_product_info
+from setup import PROCESS_MAP, STORE_LOCATION_URLS, get_web_driver
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("home-depo")
@@ -18,24 +18,19 @@ logger = logging.getLogger("home-depo")
 HOME_DEPO = 'https://www.homedepot.com/'
 
 
-def get_web_driver():
-    used_webdriver = webdriver.Chrome(CHROME_WEBDRIVER_PATH)
-    return used_webdriver
-
-
 def pretend_to_be_human(human_driver):
-    logger.info(f' browsing {human_driver.current_url}')
-    rand_int_seconds = random.randint(5, 7)
-    rand_float_seconds = random.random()
-    time.sleep(float(rand_int_seconds) - rand_float_seconds * 3)
+    logger.info(f' browsing {human_driver.current_url}'.replace(HOME_DEPO, ''))
+    rand_int = random.randint(3, 5)
+    rand_float = random.random()
+    time.sleep(float(rand_int) - rand_float * 3)
     human_driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
     # driver.find_element_by_tag_name('body').send_keys(Keys.CONTROL + Keys.HOME)
     try:
         human_driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        for push_that_button in range(rand_int_seconds):
+        for push_that_button in range(rand_int):
             body = human_driver.find_element_by_css_selector('body')
             body.send_keys(Keys.PAGE_UP)
-            time.sleep(rand_float_seconds)
+            time.sleep(rand_float)
             # driver.implicitly_wait(rand_float_seconds/2)
     except StaleElementReferenceException as ex:
         logger.info(ex)
@@ -65,6 +60,10 @@ def get_products_from_page(page_driver, shop, department):
 
 
 def get_all_product_pages(all_page_driver, shop, department):
+    """
+    Loop through product pages until next page button isn't available.
+    Return collected product info list.
+    """
     all_pages_products = []
     current_page = 0
     next_page = 1
@@ -98,13 +97,18 @@ def get_all_product_pages(all_page_driver, shop, department):
 
 
 def get_sub_department_page(sub_dept_driver, sub_department):
-    time.sleep(3)
+    """Move to and click button"""
+    time.sleep(1)
     logger.info(f' looking around for {sub_department}')
     sub_department_link = sub_dept_driver.find_element_by_link_text(sub_department)
     webdriver.ActionChains(sub_dept_driver).move_to_element(sub_department_link).click(sub_department_link).perform()
 
 
 def push_select_store_button(button_driver):
+    """
+    Find and click button selecting store for further shopping.
+    Give process some needed breathing time.
+    """
     logger.info(f' shopping at {button_driver.current_url}')
     button_xpath = "//*[contains(text(), 'Shop This Store')]"
     select_store_button = WebDriverWait(button_driver, 10).until(
@@ -113,46 +117,47 @@ def push_select_store_button(button_driver):
     time.sleep(3)
 
 
-def deal_with_mattresses(product_brand):
-    brand_search = WebDriverWait(driver, 10).until(
+def search_for_and_select_brand(product_brand, searchbar_driver):
+    """Access product brand through a Brand search bar"""
+    brand_search = WebDriverWait(searchbar_driver, 10).until(
         ec.presence_of_element_located((By.CSS_SELECTOR, 'input.dimension__filter')))
     brand_search.send_keys(product_brand)
     brand_xpath = f"//*[contains(text(), '{product_brand}')]"
     logger.info(f' looking for {product_brand} mattress')
     time.sleep(3)
-    select_brand_button = WebDriverWait(driver, 10).until(
+    select_brand_button = WebDriverWait(searchbar_driver, 10).until(
         ec.presence_of_element_located((By.XPATH, brand_xpath)))
     select_brand_button.click()
-    driver.refresh()
+    searchbar_driver.refresh()
 
 
 def select_appliance_brand(appliance_driver, product_brand):
+    """Select product brand via link"""
     WebDriverWait(appliance_driver, 10).until(
         ec.presence_of_element_located((By.LINK_TEXT, product_brand))).click()
     logger.info(f' selected {product_brand}')
 
 
 def get_shop_products(shop_driver, shop_url):
-    # shop_driver = used_driver
+
+    """
+    Collect product info defined in setup.py PROCESS_MAP across single store location
+    """
+
     shop = shop_url.replace(HOME_DEPO, '')
     shop_driver.get(shop_url)
-
     push_select_store_button(shop_driver)
     all_shop_products = []
 
     for sub_department, brands in PROCESS_MAP.items():
         if len(brands) > 0:
             for product_brand in brands:
-
                 shop_driver.get('https://www.homedepot.com/c/site_map')
-
                 get_sub_department_page(sub_department=sub_department, sub_dept_driver=shop_driver)
-
                 if sub_department == 'Mattresses':
-                    deal_with_mattresses(product_brand)
+                    search_for_and_select_brand(product_brand, searchbar_driver=shop_driver)
                 else:
                     select_appliance_brand(product_brand=product_brand, appliance_driver=shop_driver)
-
                 shop_products = get_all_product_pages(all_page_driver=shop_driver, shop=shop, department=sub_department)
                 all_shop_products += shop_products
     logger.info(f' total relevant products from shop {len(all_shop_products)}')
@@ -160,6 +165,12 @@ def get_shop_products(shop_driver, shop_url):
 
 
 def run_through_shops(global_driver):
+    """
+    Chain info gathering in several stores defined by their urls in setup.py STORE_LOCATION_URLS
+
+    Return all products in a list
+    """
+
     shop_url_list = STORE_LOCATION_URLS
     global_products = []
 
@@ -172,13 +183,15 @@ def run_through_shops(global_driver):
 
 
 def save_into_csv(products_list_of_dicts):
+    """"Save all gathered products into csv"""
+
     all_keys = []
     for product_dict in products_list_of_dicts:
         all_keys += product_dict.keys()
         all_keys = list(set(all_keys))
 
-    csvfile = open('output.csv', 'w', newline='')
-    writer = csv.DictWriter(csvfile, fieldnames=all_keys, delimiter=';')
+    csv_file = open('output.csv', 'w', newline='')
+    writer = csv.DictWriter(csv_file, fieldnames=all_keys, delimiter=';')
     writer.writeheader()
     for product in products_list_of_dicts:
         writer.writerow(product)
