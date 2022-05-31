@@ -109,12 +109,16 @@ def push_select_store_button(button_driver):
     Find and click button selecting store for further shopping.
     Give process some needed breathing time.
     """
-    logger.info(f' shopping at {button_driver.current_url}')
     button_xpath = "//*[contains(text(), 'Shop This Store')]"
     select_store_button = WebDriverWait(button_driver, 10).until(
         ec.presence_of_element_located((By.XPATH, button_xpath)))
-    select_store_button.click()
-    time.sleep(3)
+    try:
+        select_store_button.click()
+        time.sleep(3)
+    except StaleElementReferenceException:
+        button_driver.refresh()
+        push_select_store_button(button_driver)
+    logger.info(f' shopping at {button_driver.current_url}'.replace(HOME_DEPO, ''))
 
 
 def search_for_and_select_brand(product_brand, searchbar_driver):
