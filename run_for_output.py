@@ -41,6 +41,9 @@ def pretend_to_be_human(human_driver):
 
 
 def get_products_from_page(page_driver, shop, department):
+    """
+    Find all product tiles on displayed page. Collect all available tile data, including url, and join with search parameters.
+    """
     results_css_select = "div.results-wrapped"
     results_field = WebDriverWait(page_driver, 10).until(
         ec.presence_of_element_located((By.CSS_SELECTOR, results_css_select)))
@@ -100,7 +103,7 @@ def get_all_product_pages(all_page_driver, shop, department):
 
 
 def get_sub_department_page(sub_dept_driver, sub_department):
-    """Move to and click button"""
+    """Move to, and click button"""
     time.sleep(1)
     logger.info(f' looking around for {sub_department}')
     sub_department_link = sub_dept_driver.find_element_by_link_text(sub_department)
@@ -148,7 +151,7 @@ def select_appliance_brand(appliance_driver, product_brand):
 def get_shop_products(shop_driver, shop_url):
 
     """
-    Collect product info defined in setup.py PROCESS_MAP across single store location
+    Collect product info defined in setup.py - PROCESS_MAP, across a single store location defined by STORE_URL
     """
 
     shop = shop_url.replace(HOME_DEPO, '')
@@ -175,7 +178,8 @@ def run_through_shops(global_driver):
     """
     Chain info gathering in several stores defined by their urls in setup.py STORE_LOCATION_URLS
 
-    Return all products in a list
+    Return all products in a list.
+    
     """
 
     shop_url_list = STORE_LOCATION_URLS
