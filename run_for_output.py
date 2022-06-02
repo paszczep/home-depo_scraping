@@ -19,6 +19,9 @@ HOME_DEPO = 'https://www.homedepot.com/'
 
 
 def pretend_to_be_human(human_driver):
+    """
+    Let the page elements be loaded upon display attempt
+    """
     logger.info(f' browsing {human_driver.current_url}'.replace(HOME_DEPO, ''))
     rand_int = random.randint(3, 5)
     rand_float = random.random()
