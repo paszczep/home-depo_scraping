@@ -7,41 +7,37 @@ from selenium.common.exceptions import NoSuchElementException, StaleElementRefer
 import time
 import random
 import logging
-import csv
 from bs4 import BeautifulSoup
-from get_product_info import _get_product_info
-from setup import PROCESS_MAP, STORE_LOCATION_URLS, get_web_driver
+from product_info import _get_product_info
+from setup import PROCESS_MAP, STORE_LOCATION_URLS
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("home-depo")
 
-HOME_DEPO = 'https://www.homedepot.com/'
+HOME_DEPO_URL = 'https://www.homedepot.com/'
 
 
-def pretend_to_be_human(human_driver):
+def pretend_to_be_human(human_driver: webdriver):
     """
     Let the page elements be loaded upon display attempt
     """
-    logger.info(f' browsing {human_driver.current_url}'.replace(HOME_DEPO, ''))
+    logger.info(f' browsing {human_driver.current_url}'.replace(HOME_DEPO_URL, ''))
     rand_int = random.randint(3, 5)
     rand_float = random.random()
     time.sleep(float(rand_int) - rand_float * 3)
     human_driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-    # driver.find_element_by_tag_name('body').send_keys(Keys.CONTROL + Keys.HOME)
     try:
         human_driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
         for _ in range(rand_int):
-            # body = human_driver.find_element_by_css_selector('body')
             body = human_driver.find_element(By.CSS_SELECTOR, 'body')
             body.send_keys(Keys.PAGE_UP)
             time.sleep(rand_float)
-            # driver.implicitly_wait(rand_float_seconds/2)
     except StaleElementReferenceException as ex:
         logger.info(ex)
         pretend_to_be_human(human_driver)
 
 
-def get_products_from_page(page_driver, shop, department):
+def get_products_from_page(page_driver: webdriver, shop: str, department: str) -> list:
     """
     Find all product tiles on displayed page. Collect all available tile data, including url, and join with search parameters.
     """
@@ -49,7 +45,6 @@ def get_products_from_page(page_driver, shop, department):
     results_field = WebDriverWait(page_driver, 10).until(
         ec.presence_of_element_located((By.CSS_SELECTOR, results_css_select)))
 
-    # product_tiles = results_field.find_elements_by_css_selector("div.desktop.product-pod")
     product_tiles = results_field.find_elements(By.CSS_SELECTOR, "div.desktop.product-pod")
 
     logger.info(f' found {len(product_tiles)} products')
@@ -67,7 +62,7 @@ def get_products_from_page(page_driver, shop, department):
     return page_products
 
 
-def get_all_product_pages(all_page_driver, shop, department):
+def get_all_product_pages(all_page_driver: webdriver, shop: str, department: str) -> list:
     """
     Loop through product pages until next page button isn't available.
     Return collected product info list.
@@ -83,7 +78,6 @@ def get_all_product_pages(all_page_driver, shop, department):
                                                department=department)
         all_pages_products += page_products
 
-        # pagination_items = all_page_driver.find_elements_by_css_selector("li.hd-pagination__item")
         pagination_items = all_page_driver.find_elements(By.CSS_SELECTOR, "li.hd-pagination__item")
         text_items = [item.text for item in pagination_items if item != '']
         if text_items:
@@ -105,7 +99,7 @@ def get_all_product_pages(all_page_driver, shop, department):
     return all_pages_products
 
 
-def get_sub_department_page(sub_dept_driver, sub_department):
+def get_sub_department_page(sub_dept_driver: webdriver, sub_department: str):
     """Move to, and click button"""
     time.sleep(1)
     logger.info(f' looking around for {sub_department}')
@@ -113,7 +107,7 @@ def get_sub_department_page(sub_dept_driver, sub_department):
     webdriver.ActionChains(sub_dept_driver).move_to_element(sub_department_link).click(sub_department_link).perform()
 
 
-def push_select_store_button(button_driver):
+def push_select_store_button(button_driver: webdriver):
     """
     Find and click button selecting store for further shopping.
     Give process some needed breathing time.
@@ -127,10 +121,10 @@ def push_select_store_button(button_driver):
     except StaleElementReferenceException:
         button_driver.refresh()
         push_select_store_button(button_driver)
-    logger.info(f' shopping at {button_driver.current_url}'.replace(HOME_DEPO, ''))
+    logger.info(f' shopping at {button_driver.current_url}'.replace(HOME_DEPO_URL, ''))
 
 
-def search_for_and_select_brand(product_brand, searchbar_driver):
+def search_for_and_select_brand(searchbar_driver: webdriver, product_brand: str):
     """Access product brand through a Brand search bar"""
     brand_search = WebDriverWait(searchbar_driver, 10).until(
         ec.presence_of_element_located((By.CSS_SELECTOR, 'input.dimension__filter')))
@@ -144,20 +138,20 @@ def search_for_and_select_brand(product_brand, searchbar_driver):
     searchbar_driver.refresh()
 
 
-def select_appliance_brand(appliance_driver, product_brand):
+def select_appliance_brand(appliance_driver: webdriver, product_brand: str):
     """Select product brand via link"""
     WebDriverWait(appliance_driver, 10).until(
         ec.presence_of_element_located((By.LINK_TEXT, product_brand))).click()
     logger.info(f' selected {product_brand}')
 
 
-def get_shop_products(shop_driver, shop_url):
+def get_shop_products(shop_driver: webdriver, shop_url: str) -> list:
 
     """
     Collect product info defined in setup.py - PROCESS_MAP, across a single store location defined by STORE_URL
     """
 
-    shop = shop_url.replace(HOME_DEPO, '')
+    shop = shop_url.replace(HOME_DEPO_URL, '')
     shop_driver.get(shop_url)
     push_select_store_button(shop_driver)
     all_shop_products = []
@@ -168,7 +162,7 @@ def get_shop_products(shop_driver, shop_url):
                 shop_driver.get('https://www.homedepot.com/c/site_map')
                 get_sub_department_page(sub_department=sub_department, sub_dept_driver=shop_driver)
                 if sub_department == 'Mattresses':
-                    search_for_and_select_brand(product_brand, searchbar_driver=shop_driver)
+                    search_for_and_select_brand(product_brand=product_brand, searchbar_driver=shop_driver)
                 else:
                     select_appliance_brand(product_brand=product_brand, appliance_driver=shop_driver)
                 shop_products = get_all_product_pages(all_page_driver=shop_driver, shop=shop, department=sub_department)
@@ -177,12 +171,10 @@ def get_shop_products(shop_driver, shop_url):
     return all_shop_products
 
 
-def run_through_shops(global_driver):
+def run_through_shops(global_driver: webdriver) -> list:
     """
     Chain info gathering in several stores defined by their urls in setup.py STORE_LOCATION_URLS
-
     Return all products in a list.
-    
     """
 
     shop_url_list = STORE_LOCATION_URLS
@@ -194,25 +186,3 @@ def run_through_shops(global_driver):
 
     logger.info(f' total relevant products {len(global_products)}')
     return global_products
-
-
-def save_into_csv(products_list_of_dicts):
-    """"Save all gathered products into csv"""
-
-    all_keys = []
-    for product_dict in products_list_of_dicts:
-        all_keys += product_dict.keys()
-        all_keys = list(set(all_keys))
-
-    csv_file = open('output.csv', 'w', newline='')
-    writer = csv.DictWriter(csv_file, fieldnames=all_keys, delimiter=';')
-    writer.writeheader()
-    for product in products_list_of_dicts:
-        writer.writerow(product)
-
-
-if __name__ == '__main__':
-    driver = get_web_driver()
-    all_products_list = run_through_shops(global_driver=driver)
-    save_into_csv(all_products_list)
-    # run_again_after_exception()
