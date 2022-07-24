@@ -13,7 +13,7 @@ PROCESS_MAP = {
         'Samsung'
     ],
     'Mattresses': [
-        'Sealy'
+        # 'Sealy'
     ]
 }
 

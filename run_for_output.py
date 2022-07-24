@@ -30,8 +30,9 @@ def pretend_to_be_human(human_driver):
     # driver.find_element_by_tag_name('body').send_keys(Keys.CONTROL + Keys.HOME)
     try:
         human_driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        for push_that_button in range(rand_int):
-            body = human_driver.find_element_by_css_selector('body')
+        for _ in range(rand_int):
+            # body = human_driver.find_element_by_css_selector('body')
+            body = human_driver.find_element(By.CSS_SELECTOR, 'body')
             body.send_keys(Keys.PAGE_UP)
             time.sleep(rand_float)
             # driver.implicitly_wait(rand_float_seconds/2)
@@ -48,7 +49,8 @@ def get_products_from_page(page_driver, shop, department):
     results_field = WebDriverWait(page_driver, 10).until(
         ec.presence_of_element_located((By.CSS_SELECTOR, results_css_select)))
 
-    product_tiles = results_field.find_elements_by_css_selector("div.desktop.product-pod")
+    # product_tiles = results_field.find_elements_by_css_selector("div.desktop.product-pod")
+    product_tiles = results_field.find_elements(By.CSS_SELECTOR, "div.desktop.product-pod")
 
     logger.info(f' found {len(product_tiles)} products')
     page_products = []
@@ -81,13 +83,14 @@ def get_all_product_pages(all_page_driver, shop, department):
                                                department=department)
         all_pages_products += page_products
 
-        pagination_items = all_page_driver.find_elements_by_css_selector("li.hd-pagination__item")
+        # pagination_items = all_page_driver.find_elements_by_css_selector("li.hd-pagination__item")
+        pagination_items = all_page_driver.find_elements(By.CSS_SELECTOR, "li.hd-pagination__item")
         text_items = [item.text for item in pagination_items if item != '']
         if text_items:
             next_page += 1
-            pagination_area = all_page_driver.find_element_by_css_selector("nav.hd-pagination")
+            pagination_area = all_page_driver.find_element(By.CSS_SELECTOR, "nav.hd-pagination")
             try:
-                next_page_button = pagination_area.find_element_by_link_text(str(next_page))
+                next_page_button = pagination_area.find_element(By.LINK_TEXT, str(next_page))
                 logger.info(f' found {str(next_page)} page button')
                 webdriver.ActionChains(all_page_driver).move_to_element(next_page_button).click(
                     next_page_button).perform()
@@ -106,7 +109,7 @@ def get_sub_department_page(sub_dept_driver, sub_department):
     """Move to, and click button"""
     time.sleep(1)
     logger.info(f' looking around for {sub_department}')
-    sub_department_link = sub_dept_driver.find_element_by_link_text(sub_department)
+    sub_department_link = sub_dept_driver.find_element(By.LINK_TEXT, sub_department)
     webdriver.ActionChains(sub_dept_driver).move_to_element(sub_department_link).click(sub_department_link).perform()
 
 
