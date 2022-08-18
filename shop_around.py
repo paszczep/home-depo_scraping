@@ -159,7 +159,7 @@ def get_shop_products(shop_driver: webdriver, shop_url: str) -> list:
     for sub_department, brands in PROCESS_MAP.items():
         if len(brands) > 0:
             for product_brand in brands:
-                shop_driver.get('https://www.homedepot.com/c/site_map')
+                shop_driver.get(f'{HOME_DEPO_URL}c/site_map')
                 get_sub_department_page(sub_department=sub_department, sub_dept_driver=shop_driver)
                 if sub_department == 'Mattresses':
                     search_for_and_select_brand(product_brand=product_brand, searchbar_driver=shop_driver)
