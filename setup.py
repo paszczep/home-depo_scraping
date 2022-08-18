@@ -29,7 +29,6 @@ CHROME_WEBDRIVER_PATH = 'chromedriver.exe'
 
 def get_web_driver() -> webdriver:
     application_webdriver = webdriver.Chrome(CHROME_WEBDRIVER_PATH)
-    # print('PATRZAJ ZIOMEK', type(application_webdriver))
     return application_webdriver
 
 
